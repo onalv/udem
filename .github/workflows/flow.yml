@@ -1,0 +1,121 @@
+---
+name: main-workflow
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-20.04
+    needs: []
+    steps:
+
+      # https://github.com/marketplace/actions/checkout
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      # https://github.com/actions/setup-python
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+        # https://github.com/snok/install-poetry
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      # https://github.com/actions/cache
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: /.venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      # install dependencies if cache does not exist
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: |
+          poetry install --no-interaction --no-root
+
+      # run test suite
+      - name: Run tests
+        run: |
+          poetry run pytest
+
+  lint-black:
+    runs-on: ubuntu-20.04
+    needs: []
+    steps:
+
+      # https://github.com/marketplace/actions/checkout
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      # https://github.com/actions/setup-python
+      - name: Set up python
+        id: setup-python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+        # https://github.com/snok/install-poetry
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      # https://github.com/actions/cache
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: /.venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      # install dependencies if cache does not exist
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: |
+          poetry install --no-interaction --no-root
+
+      # run black
+      - name: Run black
+        run: |
+          poetry run black --diff --color
+
+
+  sandbox-deploy:
+    runs-on: ubuntu-20.04
+    needs: 
+      - unit-test
+      - lint-black
+    jobs:
+      # https://github.com/marketplace/actions/checkout
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      # https://github.com/marketplace/actions/setup-aws-sam-cli
+      - uses: aws-actions/setup-sam@v2
+
+      # https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      # Build inside Docker containers
+      - run: sam build --config-env sandbox
+
+      # Prevent prompts and failure when the stack is unchanged
+      - run: sam deploy --no-confirm-changeset --no-fail-on-empty-changeset --config-env sandbox
