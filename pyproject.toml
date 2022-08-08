@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "fastapi_demo"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.11"
+numpy = "^1.23.1"
+python-dotenv = "^0.20.0"
+fastapi = "^0.79.0"
+uvicorn = "^0.18.2"
+mangum = "^0.15.0"
+scikit-learn = "^1.1.1"
+pydantic = "^1.9.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
+pytest-mock = "^3.8.2"
+pytest-cov = "^3.0.0"
+flake8 = "^5.0.3"
+black = "^22.6.0"
+bump2version = "^1.0.1"
+Sphinx = "^5.1.1"
+jupyterlab = "^3.4.4"
+
+[tool.pytest.ini_options]
+minversion =  "7.0"
+addopts = "--cov=./ --junitxml=coverage.xml"
+testpaths = ["tests"]
+asyncio_mode = "strict"
+
+[tool.coverage.report]
+skip_empty = true
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+    "tests/*",
+    ""
+    ]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
